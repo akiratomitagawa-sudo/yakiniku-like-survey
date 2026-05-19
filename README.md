@@ -6,6 +6,7 @@
 2. お客さま用アンケート画面: `http://yakiniku-like.local:4173/`
 3. 管理画面: `http://127.0.0.1:4173/admin.html`
 4. 店頭掲示用QR確認ページ: `http://127.0.0.1:4173/qr.html`
+5. HTTPS公開が必要なときは `start_public_survey.command` を開く
 
 ## QR運用
 
@@ -14,6 +15,14 @@
 - 同じWi-Fiにつないだスマホで固定QRを読み取るとアンケートが開きます
 - `start_survey.command` を開くと、スタッフ用に管理画面が立ち上がります
 - 星4以上の回答後だけ、指定済みのGoogle口コミURLへ進めます
+
+## HTTPS公開
+
+- `start_public_survey.command` を開くと、外部公開用の HTTPS URL を発行できます
+- 現在の公開URLは `assets/store-survey-https-url.txt` に保存しています
+- 現在の公開用QRは `assets/store-survey-https-qr.svg` に保存しています
+- `localhost.run` の無料URLは固定ではないため、再起動時にURLが変わることがあります
+- URLを固定したまま HTTPS にしたい場合は、独自ドメインか有料の固定ドメイン運用が必要です
 
 ## 安全性
 
