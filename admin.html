@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>アンケート管理画面</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="page-shell">
+      <div class="admin-layout">
+        <section class="admin-toolbar">
+          <div>
+            <p class="eyebrow">ADMIN VIEW</p>
+            <h1>アンケート回答一覧</h1>
+            <p class="hero-subcopy">
+              店頭アンケートの回答状況をここで確認できます。
+            </p>
+          </div>
+          <div class="toolbar-actions">
+            <a class="secondary-button" href="./">アンケート画面へ戻る</a>
+            <a id="download-link" class="submit-button hidden" href="/api/surveys.csv">CSVをダウンロード</a>
+            <button id="refresh-button" class="secondary-button hidden" type="button">更新する</button>
+            <button id="logout-button" class="secondary-button hidden" type="button">ログアウト</button>
+          </div>
+        </section>
+
+        <section id="login-card" class="admin-toolbar">
+          <form id="login-form" class="login-form">
+            <div>
+              <p class="section-label">LOGIN</p>
+              <h2>管理画面にログイン</h2>
+              <p class="hero-subcopy">店内スタッフのみご利用ください。</p>
+            </div>
+            <label class="field">
+              <span class="field-label">管理パスワード</span>
+              <input
+                id="password-input"
+                class="text-input"
+                type="password"
+                name="password"
+                autocomplete="current-password"
+                required
+              />
+            </label>
+            <button id="login-button" class="submit-button" type="submit">ログイン</button>
+            <p id="login-status" class="support-note"></p>
+          </form>
+        </section>
+
+        <section id="admin-summary" class="admin-summary hidden">
+          <article class="summary-card">
+            <span>回答数</span>
+            <strong id="total-count">0件</strong>
+          </article>
+          <article class="summary-card">
+            <span>平均評価</span>
+            <strong id="average-rating">-</strong>
+          </article>
+          <article class="summary-card">
+            <span>口コミ案内対象</span>
+            <strong id="review-count">0件</strong>
+          </article>
+        </section>
+
+        <section id="admin-table-shell" class="admin-table-shell hidden">
+          <div class="admin-table-head">
+            <div>
+              <p class="section-label">RESPONSES</p>
+              <h2>回答詳細</h2>
+            </div>
+            <p id="last-updated" class="hero-subcopy">読み込み中…</p>
+          </div>
+
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>日時</th>
+                  <th>評価</th>
+                  <th>口コミ案内</th>
+                  <th>特によかった点</th>
+                  <th>コメント</th>
+                </tr>
+              </thead>
+              <tbody id="responses-body"></tbody>
+            </table>
+          </div>
+
+          <p id="empty-state" class="empty-state hidden">まだ回答はありません。</p>
+        </section>
+      </div>
+    </main>
+
+    <script src="./admin.js"></script>
+  </body>
+</html>

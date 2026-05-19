@@ -1,0 +1,7 @@
+.DS_Store
+data/admin-password.txt
+data/survey-responses.json
+output/
+templates/
+vendor/
+scripts/

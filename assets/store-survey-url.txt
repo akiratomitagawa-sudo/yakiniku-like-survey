@@ -1,0 +1,5 @@
+アンケートURL
+http://yakiniku-like.local:4173/
+
+このQR/URLは、このMacの固定ローカル名 `yakiniku-like.local` に紐づく想定です。
+通常のWi-Fi IP変更では変わらないため、同じQRを継続利用できます。

@@ -1,0 +1,12 @@
+{
+  "name": "yakiniku-like-survey",
+  "version": "1.0.0",
+  "private": true,
+  "description": "In-store survey app with review routing and admin dashboard",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

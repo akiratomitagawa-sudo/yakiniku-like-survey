@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>店内アンケート</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="page-shell">
+      <section class="hero-card">
+        <p class="eyebrow">IN-STORE SURVEY</p>
+        <h1>かんたんアンケート</h1>
+        <p class="hero-copy">
+          ご来店ありがとうございます。簡単なアンケートにお答えいただいた方へ、
+          ささやかなサービスをご案内しています。
+        </p>
+        <div class="hero-notes">
+          <div class="note">
+            <span class="note-label">回答時間</span>
+            <strong>約30秒</strong>
+          </div>
+          <div class="note">
+            <span class="note-label">特典</span>
+            <strong>内容は当日ご案内</strong>
+          </div>
+        </div>
+        <p class="hero-subcopy">
+          より良いお店づくりのため、率直なお声をいただけるとうれしいです。
+        </p>
+      </section>
+
+      <section class="survey-card">
+        <div class="survey-head">
+          <div>
+            <p class="section-label">STEP 1</p>
+            <h2>お店の満足度を教えてください</h2>
+          </div>
+          <p class="required-chip">入力はかんたんです</p>
+        </div>
+
+        <form id="survey-form" class="survey-form">
+          <fieldset class="rating-field">
+            <legend>今回のご来店はいかがでしたか？</legend>
+            <div class="rating-buttons" role="radiogroup" aria-label="5段階評価">
+              <button class="star-button" type="button" data-rating="1" aria-label="1つ星">
+                ★
+              </button>
+              <button class="star-button" type="button" data-rating="2" aria-label="2つ星">
+                ★
+              </button>
+              <button class="star-button" type="button" data-rating="3" aria-label="3つ星">
+                ★
+              </button>
+              <button class="star-button" type="button" data-rating="4" aria-label="4つ星">
+                ★
+              </button>
+              <button class="star-button" type="button" data-rating="5" aria-label="5つ星">
+                ★
+              </button>
+            </div>
+            <div class="rating-copy">
+              <strong id="rating-value">未選択</strong>
+              <span id="rating-message">星をタップして評価してください</span>
+            </div>
+            <input id="rating-input" type="hidden" name="rating" value="" />
+          </fieldset>
+
+          <label class="field">
+            <span class="field-label">特によかった点</span>
+            <select id="good-point" name="goodPoint">
+              <option value="">選択してください</option>
+              <option value="料理・ドリンク">料理・ドリンク</option>
+              <option value="接客">接客</option>
+              <option value="店内の雰囲気">店内の雰囲気</option>
+              <option value="スピード">スピード</option>
+              <option value="価格">価格</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span class="field-label">ひとことコメント</span>
+            <textarea
+              id="comment"
+              name="comment"
+              rows="4"
+              placeholder="任意でご記入ください"
+            ></textarea>
+          </label>
+
+          <p class="support-note">
+            ご回答後、サービス内容はスタッフよりご案内いたします。
+          </p>
+
+          <button id="submit-button" class="submit-button" type="submit">
+            回答を送信する
+          </button>
+        </form>
+
+        <section id="result-card" class="result-card hidden" aria-live="polite">
+          <p class="section-label">STEP 2</p>
+          <h3 id="result-title">ご回答ありがとうございます</h3>
+          <p id="result-text" class="result-text"></p>
+          <a
+            id="review-link"
+            class="review-link hidden"
+            href="#"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Googleで口コミを書く
+          </a>
+          <button id="reset-button" class="secondary-button" type="button">
+            もう一度入力する
+          </button>
+        </section>
+      </section>
+    </main>
+
+    <script src="./script.js"></script>
+  </body>
+</html>

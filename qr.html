@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>アンケートQR案内</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="page-shell qr-page-shell">
+      <section class="qr-hero-card">
+        <p class="eyebrow">SCAN TO REVIEW</p>
+        <h1>QRコードを読み取って<br />アンケートにご回答ください</h1>
+        <p class="hero-copy">
+          ご来店ありがとうございます。スマートフォンでQRコードを読み取り、
+          かんたんなアンケートへのご協力をお願いいたします。
+        </p>
+        <div class="hero-notes qr-benefits">
+          <div class="note">
+            <span class="note-label">回答時間</span>
+            <strong>約30秒</strong>
+          </div>
+          <div class="note">
+            <span class="note-label">ご回答特典</span>
+            <strong>サービス内容は店頭でご案内</strong>
+          </div>
+        </div>
+        <p class="hero-subcopy">
+          星4以上でご満足いただけた方には、そのままGoogle口コミへ進めるご案内が表示されます。
+        </p>
+      </section>
+
+      <section class="qr-display-card">
+        <div class="survey-head">
+          <div>
+            <p class="section-label">STEP 1</p>
+            <h2>スマホで読み取り</h2>
+          </div>
+          <p class="required-chip">読み取り後すぐ回答できます</p>
+        </div>
+
+        <div class="qr-frame">
+          <img
+            id="qr-image"
+            class="qr-image"
+            alt="アンケート用QRコード"
+            src="./assets/store-survey-qr.svg"
+          />
+        </div>
+
+        <p class="qr-caption">カメラで読み取れない場合は、下のURLを直接開いてください。</p>
+
+        <div class="qr-link-box">
+          <code id="survey-url">読み込み中...</code>
+          <button id="copy-link-button" class="secondary-button" type="button">
+            URLをコピー
+          </button>
+        </div>
+
+        <div class="qr-actions">
+          <a id="open-survey-link" class="submit-button" href="./" target="_blank" rel="noopener noreferrer">
+            アンケートを開く
+          </a>
+          <a class="secondary-button" href="./admin.html" target="_blank" rel="noopener noreferrer">
+            管理画面
+          </a>
+        </div>
+
+        <p id="copy-status" class="support-note">同じWi-Fiにつながっているスマホからご利用ください。</p>
+      </section>
+    </main>
+
+    <script src="./qr.js"></script>
+  </body>
+</html>
