@@ -5,3 +5,5 @@ output/
 templates/
 vendor/
 scripts/
+assets/store-survey-https-qr.svg
+assets/store-survey-https-url.txt
