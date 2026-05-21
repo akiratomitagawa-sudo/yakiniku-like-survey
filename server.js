@@ -29,6 +29,8 @@ const IS_PUBLIC_HTTPS = FIXED_SURVEY_ORIGIN.startsWith("https://");
 const DEFAULT_STORE_ID = STORE_DIRECTORY[0]?.id || "kitasenju";
 
 let adminPasswordCache = null;
+const META_PREFIX = "__meta__:";
+const META_MARKER = "__meta__";
 
 const STATIC_FILES = {
   "/": "index.html",
@@ -73,22 +75,37 @@ async function ensureDataFiles() {
 }
 
 async function getAdminPassword() {
+  const entries = await readStoredEntries();
+  const passwordOverride = getLatestPasswordOverride(entries);
+  if (passwordOverride) {
+    return passwordOverride;
+  }
+
   if (process.env.ADMIN_PASSWORD) {
-    return String(process.env.ADMIN_PASSWORD);
+    return {
+      mode: "plain",
+      value: String(process.env.ADMIN_PASSWORD),
+    };
   }
 
   if (adminPasswordCache) {
-    return adminPasswordCache;
+    return {
+      mode: "plain",
+      value: adminPasswordCache,
+    };
   }
 
   await ensureDataFiles();
   adminPasswordCache = (await fs.promises.readFile(ADMIN_PASSWORD_FILE, "utf8")).trim();
-  return adminPasswordCache;
+  return {
+    mode: "plain",
+    value: adminPasswordCache,
+  };
 }
 
-async function readResponses() {
+async function readStoredEntries() {
   if (isSupabaseConfigured()) {
-    return readResponsesFromSupabase();
+    return readEntriesFromSupabase();
   }
 
   await ensureDataFiles();
@@ -96,19 +113,29 @@ async function readResponses() {
 
   try {
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.map(hydrateResponse) : [];
+    return Array.isArray(parsed) ? parsed : [];
   } catch (error) {
     return [];
   }
 }
 
-async function writeResponses(responses) {
+async function writeStoredEntries(entries) {
   if (isSupabaseConfigured()) {
     throw new Error("direct_write_not_supported");
   }
 
   await ensureDataFiles();
-  await fs.promises.writeFile(RESPONSES_FILE, `${JSON.stringify(responses, null, 2)}\n`, "utf8");
+  await fs.promises.writeFile(RESPONSES_FILE, `${JSON.stringify(entries, null, 2)}\n`, "utf8");
+}
+
+async function readResponses() {
+  const entries = await readStoredEntries();
+  const resetAt = getLatestResetAt(entries);
+
+  return entries
+    .filter((entry) => !isMetaEntry(entry))
+    .filter((entry) => !resetAt || new Date(entry.createdAt).getTime() >= new Date(resetAt).getTime())
+    .map(hydrateResponse);
 }
 
 function normalizeSupabaseUrl(value) {
@@ -128,7 +155,7 @@ function getSupabaseHeaders(extraHeaders = {}) {
   };
 }
 
-async function readResponsesFromSupabase() {
+async function readEntriesFromSupabase() {
   const url = new URL(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}`);
   url.searchParams.set("select", "id,createdAt,rating,reviewEligible,goodPoint,comment");
   url.searchParams.set("order", "createdAt.desc");
@@ -142,14 +169,14 @@ async function readResponsesFromSupabase() {
   }
 
   const rows = await response.json();
-  return Array.isArray(rows) ? rows.map(hydrateResponse) : [];
+  return Array.isArray(rows) ? rows : [];
 }
 
-async function insertResponse(entry) {
+async function insertStoredEntry(entry) {
   if (!isSupabaseConfigured()) {
-    const responses = await readResponses();
-    responses.push(entry);
-    await writeResponses(responses);
+    const entries = await readStoredEntries();
+    entries.push(entry);
+    await writeStoredEntries(entries);
     return entry;
   }
 
@@ -181,6 +208,23 @@ async function insertResponse(entry) {
   }
 
   return hydrateResponse(rows[0]);
+}
+
+async function insertResponse(entry) {
+  const savedEntry = await insertStoredEntry({
+    id: entry.id,
+    createdAt: entry.createdAt,
+    rating: entry.rating,
+    reviewEligible: entry.reviewEligible,
+    goodPoint: entry.goodPoint,
+    comment: entry.comment,
+  });
+
+  return hydrateResponse({
+    ...savedEntry,
+    storeId: entry.storeId,
+    storeName: entry.storeName,
+  });
 }
 
 function getStoreById(storeId) {
@@ -227,6 +271,139 @@ function hydrateResponse(entry) {
     ...entry,
     storeId: store.id,
     storeName: entry.storeName || store.name,
+  };
+}
+
+function isMetaEntry(entry) {
+  return String(entry.id || "").startsWith(META_PREFIX) || entry.goodPoint === META_MARKER;
+}
+
+function parseMetaEntry(entry) {
+  if (!isMetaEntry(entry)) {
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(String(entry.comment || "{}"));
+    if (!payload || typeof payload !== "object") {
+      return null;
+    }
+    return {
+      id: entry.id,
+      createdAt: entry.createdAt,
+      type: payload.type,
+      payload: payload.payload || {},
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
+function buildMetaEntry(type, payload) {
+  return {
+    id: `${META_PREFIX}${type}:${Date.now()}`,
+    createdAt: new Date().toISOString(),
+    rating: 1,
+    reviewEligible: false,
+    goodPoint: META_MARKER,
+    comment: JSON.stringify({
+      type,
+      payload,
+    }),
+  };
+}
+
+function getLatestMeta(entries, type) {
+  return entries
+    .map(parseMetaEntry)
+    .filter((entry) => entry && entry.type === type)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] || null;
+}
+
+function getLatestResetAt(entries) {
+  return getLatestMeta(entries, "monthly_reset")?.payload?.effectiveFrom || null;
+}
+
+function getLatestPasswordOverride(entries) {
+  const latest = getLatestMeta(entries, "password_override");
+  if (!latest?.payload?.hash || !latest?.payload?.salt) {
+    return null;
+  }
+
+  return {
+    mode: "hash",
+    hash: latest.payload.hash,
+    salt: latest.payload.salt,
+  };
+}
+
+function createPasswordHash(password, salt = crypto.randomBytes(16).toString("hex")) {
+  return {
+    salt,
+    hash: crypto.scryptSync(String(password), salt, 64).toString("hex"),
+  };
+}
+
+function getTokyoMonthStartISOString() {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+  });
+  const parts = formatter.formatToParts(new Date());
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  return new Date(`${year}-${month}-01T00:00:00+09:00`).toISOString();
+}
+
+function summarizeResponses(responses) {
+  const totalCount = responses.length;
+  const totalRating = responses.reduce((sum, entry) => sum + Number(entry.rating || 0), 0);
+  const reviewEligibleCount = responses.filter((entry) => entry.reviewEligible).length;
+  const averageRating = totalCount ? Number((totalRating / totalCount).toFixed(1)) : null;
+
+  const storeMap = new Map();
+  STORE_DIRECTORY.forEach((store) => {
+    storeMap.set(store.id, {
+      storeId: store.id,
+      storeName: store.name,
+      totalCount: 0,
+      totalRating: 0,
+    });
+  });
+
+  responses.forEach((entry) => {
+    const key = entry.storeId || DEFAULT_STORE_ID;
+    if (!storeMap.has(key)) {
+      storeMap.set(key, {
+        storeId: key,
+        storeName: entry.storeName || key,
+        totalCount: 0,
+        totalRating: 0,
+      });
+    }
+
+    const summary = storeMap.get(key);
+    summary.totalCount += 1;
+    summary.totalRating += Number(entry.rating || 0);
+  });
+
+  const storeSummaries = Array.from(storeMap.values()).map((summary) => ({
+    storeId: summary.storeId,
+    storeName: summary.storeName,
+    totalCount: summary.totalCount,
+    averageRating: summary.totalCount
+      ? Number((summary.totalRating / summary.totalCount).toFixed(1))
+      : null,
+  }));
+
+  return {
+    overall: {
+      totalCount,
+      averageRating,
+      reviewEligibleCount,
+    },
+    stores: storeSummaries,
   };
 }
 
@@ -460,7 +637,21 @@ function getClientAddress(request) {
 }
 
 function isValidAdminPassword(input, actualPassword) {
-  const actual = Buffer.from(actualPassword);
+  if (actualPassword?.mode === "hash") {
+    const candidateHash = crypto
+      .scryptSync(String(input || ""), actualPassword.salt, 64)
+      .toString("hex");
+    const actual = Buffer.from(actualPassword.hash, "hex");
+    const received = Buffer.from(candidateHash, "hex");
+
+    if (actual.length !== received.length) {
+      return false;
+    }
+
+    return crypto.timingSafeEqual(actual, received);
+  }
+
+  const actual = Buffer.from(String(actualPassword?.value || ""));
   const received = Buffer.from(String(input || ""));
 
   if (actual.length !== received.length) {
@@ -528,9 +719,63 @@ async function handleApi(request, response, requestUrl) {
     }
 
     const responses = await readResponses();
+    const rawEntries = await readStoredEntries();
     sendJson(response, 200, {
       responses: responses.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+      summary: summarizeResponses(responses),
+      activePeriodStart: getLatestResetAt(rawEntries),
     });
+    return;
+  }
+
+  if (request.method === "POST" && pathname === "/api/admin/change-password") {
+    if (!requireAdmin(request, response)) {
+      return;
+    }
+
+    try {
+      const payload = JSON.parse((await readBody(request)) || "{}");
+      const currentPassword = await getAdminPassword();
+
+      if (!isValidAdminPassword(payload.currentPassword, currentPassword)) {
+        sendJson(response, 401, { error: "invalid_password" });
+        return;
+      }
+
+      const nextPassword = String(payload.newPassword || "").trim();
+      if (nextPassword.length < 8) {
+        sendJson(response, 400, { error: "password_too_short" });
+        return;
+      }
+
+      const passwordHash = createPasswordHash(nextPassword);
+      await insertStoredEntry(
+        buildMetaEntry("password_override", {
+          hash: passwordHash.hash,
+          salt: passwordHash.salt,
+        }),
+      );
+      sendJson(response, 200, { ok: true });
+      return;
+    } catch (error) {
+      sendJson(response, 400, { error: "invalid_payload" });
+      return;
+    }
+  }
+
+  if (request.method === "POST" && pathname === "/api/admin/reset-month") {
+    if (!requireAdmin(request, response)) {
+      return;
+    }
+
+    const effectiveFrom = getTokyoMonthStartISOString();
+    await insertStoredEntry(
+      buildMetaEntry("monthly_reset", {
+        effectiveFrom,
+      }),
+    );
+
+    sendJson(response, 200, { ok: true, effectiveFrom });
     return;
   }
 
@@ -609,6 +854,10 @@ server.listen(PORT, HOST, async () => {
     console.log("Admin password source: ADMIN_PASSWORD env");
   } else {
     console.log(`Admin password file: ${ADMIN_PASSWORD_FILE}`);
-    console.log(`Admin password: ${adminPassword}`);
+    if (adminPassword.mode === "plain") {
+      console.log(`Admin password: ${adminPassword.value}`);
+    } else {
+      console.log("Admin password source: stored override");
+    }
   }
 });

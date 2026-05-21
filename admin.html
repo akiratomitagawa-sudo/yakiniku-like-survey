@@ -50,16 +50,92 @@
 
         <section id="admin-summary" class="admin-summary hidden">
           <article class="summary-card">
-            <span>回答数</span>
+            <span>全店 総評価件数</span>
             <strong id="total-count">0件</strong>
           </article>
           <article class="summary-card">
-            <span>平均評価</span>
+            <span>全店 平均評価</span>
             <strong id="average-rating">-</strong>
           </article>
           <article class="summary-card">
             <span>口コミ案内対象</span>
             <strong id="review-count">0件</strong>
+          </article>
+          <article class="summary-card">
+            <span>集計期間</span>
+            <strong id="period-start">全期間</strong>
+          </article>
+        </section>
+
+        <section id="admin-store-shell" class="admin-table-shell hidden">
+          <div class="admin-table-head">
+            <div>
+              <p class="section-label">STORE SUMMARY</p>
+              <h2>各店の評価まとめ</h2>
+            </div>
+          </div>
+
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>店舗</th>
+                  <th>平均評価</th>
+                  <th>総評価件数</th>
+                </tr>
+              </thead>
+              <tbody id="store-summary-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="admin-controls-shell" class="admin-controls-shell hidden">
+          <article class="admin-control-card">
+            <div>
+              <p class="section-label">PASSWORD</p>
+              <h2>管理パスワード変更</h2>
+              <p class="hero-subcopy">現在のパスワード確認後、新しいパスワードへ更新します。</p>
+            </div>
+            <form id="password-form" class="admin-inline-form">
+              <input
+                id="current-password-input"
+                class="text-input"
+                type="password"
+                name="currentPassword"
+                placeholder="現在のパスワード"
+                autocomplete="current-password"
+                required
+              />
+              <input
+                id="new-password-input"
+                class="text-input"
+                type="password"
+                name="newPassword"
+                placeholder="新しいパスワード（8文字以上）"
+                autocomplete="new-password"
+                required
+              />
+              <button id="change-password-button" class="submit-button" type="submit">
+                変更する
+              </button>
+            </form>
+            <p id="password-status" class="support-note"></p>
+          </article>
+
+          <article class="admin-control-card">
+            <div>
+              <p class="section-label">MONTH RESET</p>
+              <h2>月初リセット</h2>
+              <p class="hero-subcopy">
+                今月1日 00:00 JST を集計開始日に設定します。以前の回答データは残りますが、管理画面の集計対象から外れます。
+              </p>
+            </div>
+            <div class="admin-reset-actions">
+              <button id="reset-month-button" class="secondary-button" type="button">
+                今月分へリセット
+              </button>
+            </div>
+            <p id="reset-status" class="support-note"></p>
           </article>
         </section>
 
