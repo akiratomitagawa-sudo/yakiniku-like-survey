@@ -96,7 +96,7 @@ async function readResponses() {
 
   try {
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    return Array.isArray(parsed) ? parsed.map(hydrateResponse) : [];
   } catch (error) {
     return [];
   }
@@ -142,7 +142,7 @@ async function readResponsesFromSupabase() {
   }
 
   const rows = await response.json();
-  return Array.isArray(rows) ? rows : [];
+  return Array.isArray(rows) ? rows.map(hydrateResponse) : [];
 }
 
 async function insertResponse(entry) {
@@ -159,7 +159,16 @@ async function insertResponse(entry) {
       "Content-Type": "application/json",
       Prefer: "return=representation",
     }),
-    body: JSON.stringify([entry]),
+    body: JSON.stringify([
+      {
+        id: entry.id,
+        createdAt: entry.createdAt,
+        rating: entry.rating,
+        reviewEligible: entry.reviewEligible,
+        goodPoint: entry.goodPoint,
+        comment: entry.comment,
+      },
+    ]),
   });
 
   if (!response.ok) {
@@ -171,7 +180,7 @@ async function insertResponse(entry) {
     throw new Error("supabase_insert_empty");
   }
 
-  return rows[0];
+  return hydrateResponse(rows[0]);
 }
 
 function getStoreById(storeId) {
@@ -197,6 +206,27 @@ function serializeStore(store) {
     name: store.name,
     reviewUrl: store.reviewUrl,
     surveyUrl: getSurveyUrlForStore(store.id),
+  };
+}
+
+function inferStoreIdFromEntry(entry) {
+  if (entry.storeId && getStoreById(entry.storeId)) {
+    return entry.storeId;
+  }
+
+  const rawId = String(entry.id || "");
+  const matchedStore = STORE_DIRECTORY.find((store) => rawId.startsWith(`${store.id}-`));
+  return matchedStore?.id || DEFAULT_STORE_ID;
+}
+
+function hydrateResponse(entry) {
+  const storeId = inferStoreIdFromEntry(entry);
+  const store = getStoreById(storeId);
+
+  return {
+    ...entry,
+    storeId: store.id,
+    storeName: entry.storeName || store.name,
   };
 }
 
@@ -302,7 +332,7 @@ function normalizeResponse(payload) {
   const store = getStoreById(String(payload.storeId || DEFAULT_STORE_ID));
 
   return {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: `${store.id}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     storeId: store.id,
     storeName: store.name,
     rating,
