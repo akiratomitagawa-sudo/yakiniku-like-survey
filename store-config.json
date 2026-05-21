@@ -6,42 +6,42 @@
   },
   {
     "id": "store-02",
-    "name": "追加店舗1",
+    "name": "柏東口店",
     "reviewUrl": "https://search.google.com/local/writereview?placeid=ChIJrc9ylSOdGGARR3RzTKuFfrA"
   },
   {
     "id": "store-03",
-    "name": "追加店舗2",
+    "name": "秋葉原電気街店",
     "reviewUrl": "https://search.google.com/local/writereview?placeid=ChIJk3yAvbGNGGARQgm7-5rR0Fo"
   },
   {
     "id": "store-04",
-    "name": "追加店舗3",
+    "name": "秋葉原中央通り店",
     "reviewUrl": "https://search.google.com/local/writereview?placeid=ChIJa5GkWDqNGGARy2LafXvIyWw"
   },
   {
     "id": "store-05",
-    "name": "追加店舗4",
+    "name": "五反田西口店",
     "reviewUrl": "https://search.google.com/local/writereview?placeid=ChIJnSUz6puLGGAR97Bf0J_Z-SY"
   },
   {
     "id": "store-06",
-    "name": "追加店舗5",
+    "name": "田町芝浦店",
     "reviewUrl": "https://search.google.com/local/writereview?placeid=ChIJ-bS7oxiLGGARYK37PgphJpc"
   },
   {
     "id": "store-07",
-    "name": "追加店舗6",
+    "name": "武蔵小山店",
     "reviewUrl": "https://search.google.com/local/writereview?placeid=ChIJ077D_sKLGGARCbIP5kMkPk0"
   },
   {
     "id": "store-08",
-    "name": "追加店舗7",
+    "name": "八王子店",
     "reviewUrl": "https://search.google.com/local/writereview?placeid=ChIJh9ShT2sdGWARpz76k5ABhms"
   },
   {
     "id": "store-09",
-    "name": "追加店舗8",
+    "name": "国立店",
     "reviewUrl": "https://search.google.com/local/writereview?placeid=ChIJmzuV9b3lGGARfape-MExyXo"
   }
 ]
