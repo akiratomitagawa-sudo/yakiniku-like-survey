@@ -12,11 +12,16 @@ const ROOT_DIR = __dirname;
 const DATA_DIR = process.env.DATA_DIR || path.join(ROOT_DIR, "data");
 const RESPONSES_FILE = path.join(DATA_DIR, "survey-responses.json");
 const ADMIN_PASSWORD_FILE = path.join(DATA_DIR, "admin-password.txt");
+const SUPABASE_URL = normalizeSupabaseUrl(process.env.SUPABASE_URL);
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const SUPABASE_TABLE = process.env.SUPABASE_TABLE || "survey_responses";
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 12;
 const SESSION_SECRET = crypto.randomBytes(32).toString("hex");
 const LOCAL_HOST_NAME = getLocalHostName();
 const FIXED_SURVEY_ORIGIN =
-  process.env.SURVEY_PUBLIC_BASE_URL || `http://${LOCAL_HOST_NAME}.local:${PORT}`;
+  process.env.SURVEY_PUBLIC_BASE_URL ||
+  process.env.RENDER_EXTERNAL_URL ||
+  `http://${LOCAL_HOST_NAME}.local:${PORT}`;
 const FIXED_SURVEY_URL = `${FIXED_SURVEY_ORIGIN}/`;
 const FIXED_QR_ASSET_PATH = "/assets/store-survey-qr.svg";
 const IS_PUBLIC_HTTPS = FIXED_SURVEY_ORIGIN.startsWith("https://");
@@ -45,6 +50,10 @@ const CONTENT_TYPES = {
 };
 
 async function ensureDataFiles() {
+  if (isSupabaseConfigured()) {
+    return;
+  }
+
   await fs.promises.mkdir(DATA_DIR, { recursive: true });
 
   try {
@@ -76,6 +85,10 @@ async function getAdminPassword() {
 }
 
 async function readResponses() {
+  if (isSupabaseConfigured()) {
+    return readResponsesFromSupabase();
+  }
+
   await ensureDataFiles();
   const raw = await fs.promises.readFile(RESPONSES_FILE, "utf8");
 
@@ -88,8 +101,75 @@ async function readResponses() {
 }
 
 async function writeResponses(responses) {
+  if (isSupabaseConfigured()) {
+    throw new Error("direct_write_not_supported");
+  }
+
   await ensureDataFiles();
   await fs.promises.writeFile(RESPONSES_FILE, `${JSON.stringify(responses, null, 2)}\n`, "utf8");
+}
+
+function normalizeSupabaseUrl(value) {
+  const normalized = String(value || "").trim();
+  return normalized.replace(/\/+$/, "");
+}
+
+function isSupabaseConfigured() {
+  return Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
+}
+
+function getSupabaseHeaders(extraHeaders = {}) {
+  return {
+    apikey: SUPABASE_SERVICE_ROLE_KEY,
+    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+    ...extraHeaders,
+  };
+}
+
+async function readResponsesFromSupabase() {
+  const url = new URL(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}`);
+  url.searchParams.set("select", "id,createdAt,rating,reviewEligible,goodPoint,comment");
+  url.searchParams.set("order", "createdAt.desc");
+
+  const response = await fetch(url, {
+    headers: getSupabaseHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`supabase_read_failed:${response.status}`);
+  }
+
+  const rows = await response.json();
+  return Array.isArray(rows) ? rows : [];
+}
+
+async function insertResponse(entry) {
+  if (!isSupabaseConfigured()) {
+    const responses = await readResponses();
+    responses.push(entry);
+    await writeResponses(responses);
+    return entry;
+  }
+
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}`, {
+    method: "POST",
+    headers: getSupabaseHeaders({
+      "Content-Type": "application/json",
+      Prefer: "return=representation",
+    }),
+    body: JSON.stringify([entry]),
+  });
+
+  if (!response.ok) {
+    throw new Error(`supabase_insert_failed:${response.status}`);
+  }
+
+  const rows = await response.json();
+  if (!Array.isArray(rows) || !rows[0]) {
+    throw new Error("supabase_insert_empty");
+  }
+
+  return rows[0];
 }
 
 function getLocalHostName() {
@@ -412,10 +492,8 @@ async function handleApi(request, response, pathname) {
         return;
       }
 
-      const responses = await readResponses();
-      responses.push(entry);
-      await writeResponses(responses);
-      sendJson(response, 201, { ok: true, entry });
+      const savedEntry = await insertResponse(entry);
+      sendJson(response, 201, { ok: true, entry: savedEntry });
       return;
     } catch (error) {
       sendJson(response, 500, { error: "save_failed" });
@@ -453,6 +531,11 @@ server.listen(PORT, HOST, async () => {
   console.log(`Fixed survey URL: ${FIXED_SURVEY_URL}`);
   console.log(`QR reference page: ${FIXED_SURVEY_ORIGIN}/qr.html`);
   console.log(`Admin page: ${FIXED_SURVEY_ORIGIN}/admin.html`);
+  if (isSupabaseConfigured()) {
+    console.log(`Data backend: Supabase (${SUPABASE_TABLE})`);
+  } else {
+    console.log(`Data backend: local file (${RESPONSES_FILE})`);
+  }
   if (process.env.ADMIN_PASSWORD) {
     console.log("Admin password source: ADMIN_PASSWORD env");
   } else {

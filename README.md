@@ -30,8 +30,17 @@
 - 管理パスワード保存先: `data/admin-password.txt`
 - 回答データには不要な端末情報を保存しません
 - セキュリティ用レスポンスヘッダーをサーバー側で付与しています
+- 本番では `SUPABASE_SERVICE_ROLE_KEY` をサーバー側だけに置き、ブラウザへは出しません
 
 ## 保存場所
 
 - 回答データ: `data/survey-responses.json`
 - CSV出力: 管理画面の `CSVをダウンロード`
+
+## 無料の固定HTTPS公開
+
+- `Render` の無料Webサービスを使うと、固定の `https://<service>.onrender.com` が使えます
+- `Supabase` の無料データベースを使うと、Render 無料プランでも回答データを保持できます
+- `SUPABASE_URL` と `SUPABASE_SERVICE_ROLE_KEY` が設定されている場合、サーバーは自動で `Supabase` を使います
+- `SUPABASE_TABLE` を省略した場合は `survey_responses` を使います
+- `supabase-schema.sql` を `Supabase` の SQL Editor で1回実行すると、保存先テーブルを作れます
