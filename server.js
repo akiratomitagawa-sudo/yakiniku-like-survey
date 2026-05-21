@@ -5,6 +5,7 @@ const os = require("os");
 const path = require("path");
 const { execFileSync } = require("child_process");
 const { URL } = require("url");
+const STORE_DIRECTORY = require("./store-config.json");
 
 const HOST = "0.0.0.0";
 const PORT = Number(process.env.PORT || 4173);
@@ -25,6 +26,7 @@ const FIXED_SURVEY_ORIGIN =
 const FIXED_SURVEY_URL = `${FIXED_SURVEY_ORIGIN}/`;
 const FIXED_QR_ASSET_PATH = "/assets/store-survey-qr.svg";
 const IS_PUBLIC_HTTPS = FIXED_SURVEY_ORIGIN.startsWith("https://");
+const DEFAULT_STORE_ID = STORE_DIRECTORY[0]?.id || "kitasenju";
 
 let adminPasswordCache = null;
 
@@ -172,6 +174,32 @@ async function insertResponse(entry) {
   return rows[0];
 }
 
+function getStoreById(storeId) {
+  return (
+    STORE_DIRECTORY.find((entry) => entry.id === storeId) ||
+    STORE_DIRECTORY.find((entry) => entry.id === DEFAULT_STORE_ID) ||
+    STORE_DIRECTORY[0]
+  );
+}
+
+function getSurveyUrlForStore(storeId) {
+  const store = getStoreById(storeId);
+  if (!store || store.id === DEFAULT_STORE_ID) {
+    return FIXED_SURVEY_URL;
+  }
+
+  return `${FIXED_SURVEY_URL}?store=${encodeURIComponent(store.id)}`;
+}
+
+function serializeStore(store) {
+  return {
+    id: store.id,
+    name: store.name,
+    reviewUrl: store.reviewUrl,
+    surveyUrl: getSurveyUrlForStore(store.id),
+  };
+}
+
 function getLocalHostName() {
   try {
     return execFileSync("scutil", ["--get", "LocalHostName"], {
@@ -271,8 +299,12 @@ function normalizeResponse(payload) {
     return null;
   }
 
+  const store = getStoreById(String(payload.storeId || DEFAULT_STORE_ID));
+
   return {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    storeId: store.id,
+    storeName: store.name,
     rating,
     goodPoint: String(payload.goodPoint || "").slice(0, 120).trim(),
     comment: String(payload.comment || "").slice(0, 500).trim(),
@@ -292,9 +324,11 @@ function escapeCsv(value) {
 async function buildCsv() {
   const responses = await readResponses();
   const rows = [
-    ["id", "createdAt", "rating", "reviewEligible", "goodPoint", "comment"],
+    ["id", "storeId", "storeName", "createdAt", "rating", "reviewEligible", "goodPoint", "comment"],
     ...responses.map((entry) => [
       entry.id,
+      entry.storeId || DEFAULT_STORE_ID,
+      entry.storeName || getStoreById(entry.storeId || DEFAULT_STORE_ID)?.name || "",
       entry.createdAt,
       entry.rating,
       entry.reviewEligible ? "yes" : "no",
@@ -406,18 +440,23 @@ function isValidAdminPassword(input, actualPassword) {
   return crypto.timingSafeEqual(actual, received);
 }
 
-async function handleApi(request, response, pathname) {
+async function handleApi(request, response, requestUrl) {
+  const pathname = requestUrl.pathname;
+
   if (request.method === "GET" && pathname === "/api/health") {
     sendJson(response, 200, { ok: true });
     return;
   }
 
   if (request.method === "GET" && pathname === "/api/config") {
+    const selectedStore = getStoreById(requestUrl.searchParams.get("store") || DEFAULT_STORE_ID);
     sendJson(response, 200, {
-      fixedSurveyUrl: FIXED_SURVEY_URL,
+      fixedSurveyUrl: getSurveyUrlForStore(selectedStore.id),
       fixedSurveyOrigin: FIXED_SURVEY_ORIGIN,
       fixedQrAssetPath: FIXED_QR_ASSET_PATH,
       localHostName: `${LOCAL_HOST_NAME}.local`,
+      selectedStore: serializeStore(selectedStore),
+      stores: STORE_DIRECTORY.map(serializeStore),
     });
     return;
   }
@@ -510,7 +549,7 @@ const server = http.createServer(async (request, response) => {
     const pathname = requestUrl.pathname;
 
     if (pathname.startsWith("/api/")) {
-      await handleApi(request, response, pathname);
+      await handleApi(request, response, requestUrl);
       return;
     }
 

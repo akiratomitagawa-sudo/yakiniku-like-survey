@@ -17,6 +17,7 @@
 - 星4以上の回答後だけ、指定済みのGoogle口コミURLへ進めます
 - 本番用の固定HTTPS QRは `assets/store-survey-onrender-qr.svg` です
 - 本番用URLは `assets/store-survey-onrender-url.txt` に保存しています
+- 多店舗用のURL一覧は `assets/store-url-list.csv` に保存しています
 
 ## HTTPS公開
 
@@ -47,3 +48,12 @@
 - `SUPABASE_TABLE` を省略した場合は `survey_responses` を使います
 - `supabase-schema.sql` を `Supabase` の SQL Editor で1回実行すると、保存先テーブルを作れます
 - 現在の本番URLは `https://yakiniku-like-survey.onrender.com/` です
+
+## 多店舗対応
+
+- 店舗ごとの口コミURL設定は `store-config.json` で管理しています
+- 北千住店は既存のまま `https://yakiniku-like-survey.onrender.com/` で使えます
+- 追加店舗は `?store=store-02` のようなURLで切り替えます
+- 8店舗分は仮の店舗名 `追加店舗1` から `追加店舗8` で登録しています
+- 正式な店舗名が分かれば `store-config.json` の `name` を差し替えるだけで更新できます
+- 管理画面とCSVには回答店舗名も保存されます

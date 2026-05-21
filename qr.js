@@ -5,16 +5,17 @@ const copyStatus = document.getElementById("copy-status");
 
 async function loadQrConfig() {
   try {
-    const response = await fetch("/api/config", { cache: "no-store" });
+    const response = await fetch(`/api/config${window.location.search}`, { cache: "no-store" });
     if (!response.ok) {
       throw new Error("config_failed");
     }
 
     const config = await response.json();
+    const storeName = config.selectedStore?.name || "対象店舗";
     surveyUrlEl.textContent = config.fixedSurveyUrl;
     openSurveyLink.href = config.fixedSurveyUrl;
     copyStatus.textContent =
-      `固定URL: ${config.fixedSurveyUrl}。同じQRコードを継続してご利用いただけます。`;
+      `${storeName} の固定URL: ${config.fixedSurveyUrl}。同じQRコードを継続してご利用いただけます。`;
   } catch (error) {
     surveyUrlEl.textContent = "URLを取得できませんでした";
     copyStatus.textContent =

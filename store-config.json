@@ -1,0 +1,47 @@
+[
+  {
+    "id": "kitasenju",
+    "name": "北千住店",
+    "reviewUrl": "https://search.google.com/local/writereview?placeid=ChIJYzKP1PSPGGARdlpVCvSjuKA&source=g.page.m.ia._&utm_source=gbp&laa=nmx-review-solicitation-ia2"
+  },
+  {
+    "id": "store-02",
+    "name": "追加店舗1",
+    "reviewUrl": "https://search.google.com/local/writereview?placeid=ChIJrc9ylSOdGGARR3RzTKuFfrA"
+  },
+  {
+    "id": "store-03",
+    "name": "追加店舗2",
+    "reviewUrl": "https://search.google.com/local/writereview?placeid=ChIJk3yAvbGNGGARQgm7-5rR0Fo"
+  },
+  {
+    "id": "store-04",
+    "name": "追加店舗3",
+    "reviewUrl": "https://search.google.com/local/writereview?placeid=ChIJa5GkWDqNGGARy2LafXvIyWw"
+  },
+  {
+    "id": "store-05",
+    "name": "追加店舗4",
+    "reviewUrl": "https://search.google.com/local/writereview?placeid=ChIJnSUz6puLGGAR97Bf0J_Z-SY"
+  },
+  {
+    "id": "store-06",
+    "name": "追加店舗5",
+    "reviewUrl": "https://search.google.com/local/writereview?placeid=ChIJ-bS7oxiLGGARYK37PgphJpc"
+  },
+  {
+    "id": "store-07",
+    "name": "追加店舗6",
+    "reviewUrl": "https://search.google.com/local/writereview?placeid=ChIJ077D_sKLGGARCbIP5kMkPk0"
+  },
+  {
+    "id": "store-08",
+    "name": "追加店舗7",
+    "reviewUrl": "https://search.google.com/local/writereview?placeid=ChIJh9ShT2sdGWARpz76k5ABhms"
+  },
+  {
+    "id": "store-09",
+    "name": "追加店舗8",
+    "reviewUrl": "https://search.google.com/local/writereview?placeid=ChIJmzuV9b3lGGARfape-MExyXo"
+  }
+]

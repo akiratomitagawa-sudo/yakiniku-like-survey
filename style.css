@@ -170,6 +170,12 @@ textarea {
   color: var(--text);
 }
 
+.store-context {
+  margin: -6px 0 22px;
+  color: var(--primary-strong);
+  font-weight: 700;
+}
+
 .hero-notes {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

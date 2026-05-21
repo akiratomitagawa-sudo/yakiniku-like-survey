@@ -76,6 +76,9 @@ function renderTable(responses) {
     const createdAtCell = document.createElement("td");
     createdAtCell.textContent = formatDate(entry.createdAt);
 
+    const storeCell = document.createElement("td");
+    storeCell.textContent = entry.storeName || entry.storeId || "-";
+
     const ratingCell = document.createElement("td");
     const ratingPill = document.createElement("span");
     ratingPill.className = "rating-pill";
@@ -91,7 +94,7 @@ function renderTable(responses) {
     const commentCell = document.createElement("td");
     commentCell.textContent = entry.comment || "-";
 
-    row.append(createdAtCell, ratingCell, reviewCell, goodPointCell, commentCell);
+    row.append(createdAtCell, storeCell, ratingCell, reviewCell, goodPointCell, commentCell);
     responsesBody.appendChild(row);
   });
 }

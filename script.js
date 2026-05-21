@@ -1,4 +1,4 @@
-const GOOGLE_REVIEW_URL =
+const DEFAULT_GOOGLE_REVIEW_URL =
   "https://search.google.com/local/writereview?placeid=ChIJYzKP1PSPGGARdlpVCvSjuKA&source=g.page.m.ia._&utm_source=gbp&laa=nmx-review-solicitation-ia2";
 
 const ratingInput = document.getElementById("rating-input");
@@ -13,7 +13,16 @@ const resetButton = document.getElementById("reset-button");
 const submitButton = document.getElementById("submit-button");
 const goodPointInput = document.getElementById("good-point");
 const commentInput = document.getElementById("comment");
+const storeNameEl = document.getElementById("store-name");
+const storeSummaryEl = document.getElementById("store-summary");
 const starButtons = Array.from(document.querySelectorAll(".star-button"));
+
+let selectedStore = {
+  id: "kitasenju",
+  name: "北千住店",
+  reviewUrl: DEFAULT_GOOGLE_REVIEW_URL,
+};
+let surveyReady = false;
 
 const ratingMessages = {
   1: "ご期待に沿えず申し訳ありません。改善の参考にさせていただきます。",
@@ -49,8 +58,8 @@ function resetForm() {
     button.setAttribute("aria-pressed", "false");
   });
 
-  submitButton.disabled = false;
-  submitButton.textContent = "回答を送信する";
+  submitButton.disabled = !surveyReady;
+  submitButton.textContent = surveyReady ? "回答を送信する" : "準備中…";
 }
 
 function buildResultMessage(rating) {
@@ -95,12 +104,44 @@ surveyForm.addEventListener("submit", (event) => {
 resetButton.addEventListener("click", resetForm);
 
 resetForm();
+initializeSurvey();
+
+async function initializeSurvey() {
+  submitButton.disabled = true;
+  submitButton.textContent = "準備中…";
+
+  try {
+    const response = await fetch(`/api/config${window.location.search}`, { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error("config_failed");
+    }
+
+    const config = await response.json();
+    if (config.selectedStore) {
+      selectedStore = config.selectedStore;
+    }
+  } catch (error) {
+    selectedStore = {
+      id: "kitasenju",
+      name: "北千住店",
+      reviewUrl: DEFAULT_GOOGLE_REVIEW_URL,
+    };
+  } finally {
+    surveyReady = true;
+    storeNameEl.textContent = selectedStore.name;
+    storeSummaryEl.textContent = `${selectedStore.name} のご来店体験についてお聞かせください。`;
+    document.title = `${selectedStore.name} | 店内アンケート`;
+    submitButton.disabled = false;
+    submitButton.textContent = "回答を送信する";
+  }
+}
 
 async function submitSurvey(rating) {
   submitButton.disabled = true;
   submitButton.textContent = "送信中…";
 
   const payload = {
+    storeId: selectedStore.id,
     rating,
     goodPoint: goodPointInput.value,
     comment: commentInput.value.trim(),
@@ -124,7 +165,7 @@ async function submitSurvey(rating) {
     resultText.textContent = result.text;
 
     if (result.showReviewLink) {
-      reviewLink.href = GOOGLE_REVIEW_URL;
+      reviewLink.href = selectedStore.reviewUrl || DEFAULT_GOOGLE_REVIEW_URL;
       reviewLink.classList.remove("hidden");
     } else {
       reviewLink.classList.add("hidden");
