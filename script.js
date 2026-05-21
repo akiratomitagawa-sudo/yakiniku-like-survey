@@ -1,5 +1,5 @@
 const GOOGLE_REVIEW_URL =
-  "https://www.google.com/search?client=safari&hs=rOa&sca_esv=afc85aa92f7b31d4&channel=iphone_bm&sxsrf=ANbL-n5I-f0OznwiNtklUc1f_SwQc_upHw:1779210735684&si=AL3DRZEsmMGCryMMFSHJ3StBhOdZ2-6yYkXd_doETEE1OR-qOaZcW6UIfWQXHqYa7aB54sDIi22diYPFQJufAyGScV5QLgLadejsjIN3Hk9sp0P5rcybZeF-xr3iMRude6lf17zGTXZI4jLwpmexIFBUQPonOyvvpstYtzJeueuzR2rPeh0ekhI%3D&q=%E7%84%BC%E8%82%89%E3%83%A9%E3%82%A4%E3%82%AF+%E5%8C%97%E5%8D%83%E4%BD%8F%E5%BA%97+%E3%82%AF%E3%83%81%E3%82%B3%E3%83%9F&sa=X&ved=2ahUKEwio-IW_7MWUAxUbdPUHHc-zMw8Q0bkNegQINhAH&biw=1470&bih=776&dpr=2#lrd=0x60188ff4d48f3263:0xa0b8a3f40a555a76,3,,,,";
+  "https://search.google.com/local/writereview?placeid=ChIJYzKP1PSPGGARdlpVCvSjuKA&source=g.page.m.ia._&utm_source=gbp&laa=nmx-review-solicitation-ia2";
 
 const ratingInput = document.getElementById("rating-input");
 const ratingValue = document.getElementById("rating-value");
