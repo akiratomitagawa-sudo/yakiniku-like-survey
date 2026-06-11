@@ -16,6 +16,7 @@ const ADMIN_PASSWORD_FILE = path.join(DATA_DIR, "admin-password.txt");
 const SUPABASE_URL = normalizeSupabaseUrl(process.env.SUPABASE_URL);
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const SUPABASE_TABLE = process.env.SUPABASE_TABLE || "survey_responses";
+const SUPABASE_FETCH_TIMEOUT_MS = Number(process.env.SUPABASE_FETCH_TIMEOUT_MS || 8000);
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 12;
 const SESSION_SECRET = crypto.randomBytes(32).toString("hex");
 const LOCAL_HOST_NAME = getLocalHostName();
@@ -29,6 +30,7 @@ const IS_PUBLIC_HTTPS = FIXED_SURVEY_ORIGIN.startsWith("https://");
 const DEFAULT_STORE_ID = STORE_DIRECTORY[0]?.id || "kitasenju";
 
 let adminPasswordCache = null;
+let lastSupabaseFallbackLog = "";
 const META_PREFIX = "__meta__:";
 const META_MARKER = "__meta__";
 
@@ -54,10 +56,6 @@ const CONTENT_TYPES = {
 };
 
 async function ensureDataFiles() {
-  if (isSupabaseConfigured()) {
-    return;
-  }
-
   await fs.promises.mkdir(DATA_DIR, { recursive: true });
 
   try {
@@ -105,9 +103,17 @@ async function getAdminPassword() {
 
 async function readStoredEntries() {
   if (isSupabaseConfigured()) {
-    return readEntriesFromSupabase();
+    try {
+      return await readEntriesFromSupabase();
+    } catch (error) {
+      logSupabaseFallback("read", error);
+    }
   }
 
+  return readLocalStoredEntries();
+}
+
+async function readLocalStoredEntries() {
   await ensureDataFiles();
   const raw = await fs.promises.readFile(RESPONSES_FILE, "utf8");
 
@@ -120,10 +126,6 @@ async function readStoredEntries() {
 }
 
 async function writeStoredEntries(entries) {
-  if (isSupabaseConfigured()) {
-    throw new Error("direct_write_not_supported");
-  }
-
   await ensureDataFiles();
   await fs.promises.writeFile(RESPONSES_FILE, `${JSON.stringify(entries, null, 2)}\n`, "utf8");
 }
@@ -155,12 +157,46 @@ function getSupabaseHeaders(extraHeaders = {}) {
   };
 }
 
+function formatSupabaseError(error) {
+  const cause = error?.cause;
+  if (cause?.code) {
+    return `${cause.code}:${cause.message || "unknown"}`;
+  }
+  if (error?.code) {
+    return `${error.code}:${error.message || "unknown"}`;
+  }
+  return error?.message || String(error);
+}
+
+function logSupabaseFallback(action, error) {
+  const summary = `[supabase-fallback] ${action} -> local (${formatSupabaseError(error)})`;
+  if (summary === lastSupabaseFallbackLog) {
+    return;
+  }
+  lastSupabaseFallbackLog = summary;
+  console.warn(summary);
+}
+
+async function fetchWithTimeout(url, options = {}) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), SUPABASE_FETCH_TIMEOUT_MS);
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function readEntriesFromSupabase() {
   const url = new URL(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}`);
   url.searchParams.set("select", "id,createdAt,rating,reviewEligible,goodPoint,comment");
   url.searchParams.set("order", "createdAt.desc");
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     headers: getSupabaseHeaders(),
   });
 
@@ -180,34 +216,42 @@ async function insertStoredEntry(entry) {
     return entry;
   }
 
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}`, {
-    method: "POST",
-    headers: getSupabaseHeaders({
-      "Content-Type": "application/json",
-      Prefer: "return=representation",
-    }),
-    body: JSON.stringify([
-      {
-        id: entry.id,
-        createdAt: entry.createdAt,
-        rating: entry.rating,
-        reviewEligible: entry.reviewEligible,
-        goodPoint: entry.goodPoint,
-        comment: entry.comment,
-      },
-    ]),
-  });
+  try {
+    const response = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}`, {
+      method: "POST",
+      headers: getSupabaseHeaders({
+        "Content-Type": "application/json",
+        Prefer: "return=representation",
+      }),
+      body: JSON.stringify([
+        {
+          id: entry.id,
+          createdAt: entry.createdAt,
+          rating: entry.rating,
+          reviewEligible: entry.reviewEligible,
+          goodPoint: entry.goodPoint,
+          comment: entry.comment,
+        },
+      ]),
+    });
 
-  if (!response.ok) {
-    throw new Error(`supabase_insert_failed:${response.status}`);
+    if (!response.ok) {
+      throw new Error(`supabase_insert_failed:${response.status}`);
+    }
+
+    const rows = await response.json();
+    if (!Array.isArray(rows) || !rows[0]) {
+      throw new Error("supabase_insert_empty");
+    }
+
+    return hydrateResponse(rows[0]);
+  } catch (error) {
+    logSupabaseFallback("insert", error);
+    const entries = await readLocalStoredEntries();
+    entries.push(entry);
+    await writeStoredEntries(entries);
+    return hydrateResponse(entry);
   }
-
-  const rows = await response.json();
-  if (!Array.isArray(rows) || !rows[0]) {
-    throw new Error("supabase_insert_empty");
-  }
-
-  return hydrateResponse(rows[0]);
 }
 
 async function insertResponse(entry) {
@@ -839,8 +883,6 @@ const server = http.createServer(async (request, response) => {
 
 server.listen(PORT, HOST, async () => {
   await ensureDataFiles();
-  const adminPassword = await getAdminPassword();
-
   console.log(`Survey app running at http://127.0.0.1:${PORT}`);
   console.log(`Fixed survey URL: ${FIXED_SURVEY_URL}`);
   console.log(`QR reference page: ${FIXED_SURVEY_ORIGIN}/qr.html`);
@@ -850,14 +892,19 @@ server.listen(PORT, HOST, async () => {
   } else {
     console.log(`Data backend: local file (${RESPONSES_FILE})`);
   }
-  if (process.env.ADMIN_PASSWORD) {
-    console.log("Admin password source: ADMIN_PASSWORD env");
-  } else {
-    console.log(`Admin password file: ${ADMIN_PASSWORD_FILE}`);
-    if (adminPassword.mode === "plain") {
-      console.log(`Admin password: ${adminPassword.value}`);
+  try {
+    const adminPassword = await getAdminPassword();
+    if (process.env.ADMIN_PASSWORD) {
+      console.log("Admin password source: ADMIN_PASSWORD env");
     } else {
-      console.log("Admin password source: stored override");
+      console.log(`Admin password file: ${ADMIN_PASSWORD_FILE}`);
+      if (adminPassword.mode === "plain") {
+        console.log(`Admin password: ${adminPassword.value}`);
+      } else {
+        console.log("Admin password source: stored override");
+      }
     }
+  } catch (error) {
+    console.warn(`[startup-warning] admin metadata unavailable: ${error.message || error}`);
   }
 });
